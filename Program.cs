@@ -116,6 +116,11 @@ class Program
     static void ProcessTwinDataForLED(Twin twin)
     {
         Console.WriteLine("ProcessTwinDataForLED Start\n");
+        if (twin.Properties.Reported == null)
+        {
+            Console.WriteLine("TwinProperties Reported is null");
+            return;
+        }
         if (twin.Properties.Reported.Contains("ledState"))
         {
             Console.WriteLine("ledState Contain\n");
