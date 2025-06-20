@@ -106,7 +106,7 @@ class Program
         while (true)
         {
             // Task<Twin> twinTask = registryManager.GetTwinAsync(targetDeviceId);
-            
+
             Twin twin = await registryManager.GetTwinAsync(targetDeviceId);
             ProcessTwinDataForLED(twin);
             await Task.Delay(1000);
@@ -115,8 +115,10 @@ class Program
 
     static void ProcessTwinDataForLED(Twin twin)
     {
+        Console.WriteLine("ProcessTwinDataForLED Start\n");
         if (twin.Properties.Reported.Contains("ledState"))
         {
+            Console.WriteLine("ledState Contain\n");
             object reported = twin.Properties.Reported["ledState"];
             if (reported != null)
             {
