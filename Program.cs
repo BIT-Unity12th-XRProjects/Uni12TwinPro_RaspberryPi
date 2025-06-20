@@ -17,6 +17,8 @@ class Program
     static string connectionRecvString = "HostName=Uni12TwinProTest.azure-devices.net;SharedAccessKeyName=iothubowner;SharedAccessKey=Ez/vrnK5xfmYrosJCMRRkR7wuIDZGSV/BAIoTNvpoiU=";
     static string targetDeviceId = "TestDevice";
     static RegistryManager registryManager;
+
+    private static bool _ledState = false;
     static async Task Main(string[] args)
     {
         try
@@ -27,9 +29,9 @@ class Program
             // gpio.OpenPin(toggleSwitchPin, PinMode.Input);
             gpio.OpenPin(ledPin, PinMode.Output);
             
-            Console.WriteLine($"[{DateTime.Now}] current state : {currentState}");
+            // Console.WriteLine($"[{DateTime.Now}] current state : {currentState}");
             // pinValue = gpio.Read(toggleSwitchPin);
-            Console.WriteLine($"[{DateTime.Now}] pin value : {pinValue}");
+            // Console.WriteLine($"[{DateTime.Now}] pin value : {pinValue}");
 
             bool running = true;
             while (running)
@@ -72,45 +74,46 @@ class Program
     //     
     // }
 
-    static async Task SendToggleStateAsync()
-    {
-        //Console.WriteLine($"[{DateTime.Now}] SendToggleStateAsync");
-
-        if (pinValue == PinValue.High)
-        {
-            currentState = true;
-        }
-        else if (pinValue == PinValue.Low)
-        {
-            currentState = false;
-        }
-
-        if (currentState == lastState)
-        {
-            return;
-        }
-
-        lastState = currentState;
-        Console.WriteLine($"[{DateTime.Now}] current state: {currentState}");
-        TwinCollection reportedProperties = new TwinCollection();
-        reportedProperties["toggleState"] = currentState;
-
-        await deviceClient.UpdateReportedPropertiesAsync(reportedProperties);
-    }
+    // static async Task SendToggleStateAsync()
+    // {
+    //     //Console.WriteLine($"[{DateTime.Now}] SendToggleStateAsync");
+    //
+    //     if (pinValue == PinValue.High)
+    //     {
+    //         currentState = true;
+    //     }
+    //     else if (pinValue == PinValue.Low)
+    //     {
+    //         currentState = false;
+    //     }
+    //
+    //     if (currentState == lastState)
+    //     {
+    //         return;
+    //     }
+    //
+    //     lastState = currentState;
+    //     Console.WriteLine($"[{DateTime.Now}] current state: {currentState}");
+    //     TwinCollection reportedProperties = new TwinCollection();
+    //     reportedProperties["toggleState"] = currentState;
+    //
+    //     await deviceClient.UpdateReportedPropertiesAsync(reportedProperties);
+    // }
 
     static async Task RecvLEDStateAsync()
     {
+        Console.WriteLine("RecvLEDStateAsync Start\n");
         while (true)
         {
             // Task<Twin> twinTask = registryManager.GetTwinAsync(targetDeviceId);
             
             Twin twin = await registryManager.GetTwinAsync(targetDeviceId);
-            ProcessTwinData(twin);
+            ProcessTwinDataForLED(twin);
             await Task.Delay(1000);
         }
     }
 
-    static void ProcessTwinData(Twin twin)
+    static void ProcessTwinDataForLED(Twin twin)
     {
         if (twin.Properties.Reported.Contains("ledState"))
         {
@@ -118,6 +121,7 @@ class Program
             if (reported != null)
             {
                 PinValue ledValue = reported.ToString() == "True" ? PinValue.High : PinValue.Low; 
+                Console.WriteLine($"current led state: {ledValue}");
                 gpio.Write(ledPin, ledValue);
             }
         }
