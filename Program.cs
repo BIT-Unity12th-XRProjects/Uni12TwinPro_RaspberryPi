@@ -24,6 +24,10 @@ class Program
         try
         {
             registryManager = RegistryManager.CreateFromConnectionString(connectionRecvString);
+            if (registryManager == null)
+            {
+                Console.WriteLine("RegistryManager is null");
+            }
             // deviceClient = DeviceClient.CreateFromConnectionString(connectionSendString);
 
             // gpio.OpenPin(toggleSwitchPin, PinMode.Input);
