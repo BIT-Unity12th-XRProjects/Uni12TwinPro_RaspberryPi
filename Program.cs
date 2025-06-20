@@ -10,31 +10,36 @@ class Program
     private static bool lastState = false;
     private static GpioController gpio = new GpioController();
     private static int toggleSwitchPin = 4;
+    private static int ledPin = 4;
     private static PinValue pinValue;
     
     static string connectionSendString = "HostName=Uni12TwinPro.azure-devices.net;DeviceId=TestDevice;SharedAccessKey=tYGn6+N1iCwjiGVaM8oJp3HzlLinx0W6w0bHoMw5HOo=";
-    // static string connectionRecvString = "HostName=Uni12TwinProTest.azure-devices.net;SharedAccessKeyName=iothubowner;SharedAccessKey=Ez/vrnK5xfmYrosJCMRRkR7wuIDZGSV/BAIoTNvpoiU=";
-    
-    // static RegistryManager registryManager;
+    static string connectionRecvString = "HostName=Uni12TwinProTest.azure-devices.net;SharedAccessKeyName=iothubowner;SharedAccessKey=Ez/vrnK5xfmYrosJCMRRkR7wuIDZGSV/BAIoTNvpoiU=";
+    static string targetDeviceId = "TestDevice";
+    static RegistryManager registryManager;
     static async Task Main(string[] args)
     {
-        // registryManager = RegistryManager.CreateFromConnectionString(connectionRecvString);
         try
         {
-            deviceClient = DeviceClient.CreateFromConnectionString(connectionSendString);
+            registryManager = RegistryManager.CreateFromConnectionString(connectionRecvString);
+            // deviceClient = DeviceClient.CreateFromConnectionString(connectionSendString);
 
-            gpio.OpenPin(toggleSwitchPin, PinMode.Input);
-
+            // gpio.OpenPin(toggleSwitchPin, PinMode.Input);
+            gpio.OpenPin(ledPin, PinMode.Output);
+            
             Console.WriteLine($"[{DateTime.Now}] current state : {currentState}");
-            pinValue = gpio.Read(toggleSwitchPin);
+            // pinValue = gpio.Read(toggleSwitchPin);
             Console.WriteLine($"[{DateTime.Now}] pin value : {pinValue}");
 
             bool running = true;
             while (running)
             {
-                pinValue = gpio.Read(toggleSwitchPin);
+                // pinValue = gpio.Read(toggleSwitchPin);
+                //
+                // await SendToggleStateAsync();
+                // await Task.Delay(50);
 
-                await SendToggleStateAsync();
+                await RecvLEDStateAsync();
                 await Task.Delay(50);
 
                 if (Console.KeyAvailable)
@@ -91,5 +96,30 @@ class Program
         reportedProperties["toggleState"] = currentState;
 
         await deviceClient.UpdateReportedPropertiesAsync(reportedProperties);
+    }
+
+    static async Task RecvLEDStateAsync()
+    {
+        while (true)
+        {
+            // Task<Twin> twinTask = registryManager.GetTwinAsync(targetDeviceId);
+            
+            Twin twin = await registryManager.GetTwinAsync(targetDeviceId);
+            ProcessTwinData(twin);
+            await Task.Delay(1000);
+        }
+    }
+
+    static void ProcessTwinData(Twin twin)
+    {
+        if (twin.Properties.Reported.Contains("ledState"))
+        {
+            object reported = twin.Properties.Reported["ledState"];
+            if (reported != null)
+            {
+                PinValue ledValue = reported.ToString() == "True" ? PinValue.High : PinValue.Low; 
+                gpio.Write(ledPin, ledValue);
+            }
+        }
     }
 }
