@@ -137,7 +137,7 @@ class Program
         if (twin.Properties.Desired.Contains("ledState"))
         {
             Console.WriteLine("ledState Contain\n");
-            object reported = twin.Properties.Reported["ledState"];
+            object reported = twin.Properties.Desired["ledState"];
             if (reported != null)
             {
                 PinValue ledValue = reported.ToString() == "True" ? PinValue.High : PinValue.Low; 
