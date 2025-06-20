@@ -105,9 +105,20 @@ class Program
         Console.WriteLine("RecvLEDStateAsync Start\n");
         while (true)
         {
-            // Task<Twin> twinTask = registryManager.GetTwinAsync(targetDeviceId);
+            Task<Twin> twinTask = registryManager.GetTwinAsync(targetDeviceId);
+            Twin twin;
+            while (true)
+            {
+                if (twinTask.IsCompleted)
+                {
+                    break;
+                }
 
-            Twin twin = await registryManager.GetTwinAsync(targetDeviceId);
+                Task.Delay(50);
+            }
+            twin = twinTask.Result;    
+            
+            // Twin twin = await registryManager.GetTwinAsync(targetDeviceId);
             ProcessTwinDataForLED(twin);
             await Task.Delay(1000);
         }
@@ -119,11 +130,6 @@ class Program
         if (twin == null)
         {
             Console.WriteLine("Twin is null");
-            return;
-        }
-        if (twin.Properties.Reported == null)
-        {
-            Console.WriteLine("TwinProperties Reported is null");
             return;
         }
         if (twin.Properties.Reported.Contains("ledState"))
