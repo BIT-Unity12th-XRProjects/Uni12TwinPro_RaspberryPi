@@ -8,12 +8,9 @@ class Program
     private static DeviceClient _deviceClient;
     private static bool _currentState = false;
     private static bool _lastState = false;
-    private static GpioController _ledPinController = new GpioController();
-    private static GpioController _toggleSwitchPinController = new GpioController();
+    private static GpioController _gpioController = new GpioController();
     private static int _toggleSwitchPinNumber = 14;
     private static int _ledPinNumber = 4;
-    private static PinValue _ledPinValue;
-    private static PinValue _toggleSwitchPinValue;
     
     private static string _deviceConnectionString =
         "HostName=Uni12TwinPro.azure-devices.net;DeviceId=TestDevice;SharedAccessKey=tYGn6+N1iCwjiGVaM8oJp3HzlLinx0W6w0bHoMw5HOo=";
@@ -21,7 +18,7 @@ class Program
         "HostName=Uni12TwinPro.azure-devices.net;SharedAccessKeyName=iothubowner;SharedAccessKey=ts51E0cBODPGFlLbDyoC7pZiHyzbP3wJ/AIoTODruRw=";
     static string _targetDeviceId = "TestDevice";
     
-    static RegistryManager _registryManager;
+    private static RegistryManager _registryManager;
 
     private static bool _ledState = false;
     static async Task Main(string[] args)
@@ -33,7 +30,7 @@ class Program
         try
         {
             _registryManager = RegistryManager.CreateFromConnectionString(_registryConnectionString);
-            _ledPinController.OpenPin(_ledPinNumber, PinMode.Output);
+            _gpioController.OpenPin(_ledPinNumber, PinMode.Output);
         }
         catch (Exception ex)
         {
@@ -43,7 +40,7 @@ class Program
         try
         {
             _deviceClient = DeviceClient.CreateFromConnectionString(_deviceConnectionString);
-            _toggleSwitchPinController.OpenPin(_toggleSwitchPinNumber, PinMode.Input);
+            _gpioController.OpenPin(_toggleSwitchPinNumber, PinMode.Input);
         }
         catch (Exception ex)
         {
@@ -87,16 +84,16 @@ class Program
         while (!token.IsCancellationRequested)
         {
             Console.WriteLine($"[{DateTime.Now}] current state : {_currentState}");
-            PinValue pin = _toggleSwitchPinController.Read(_toggleSwitchPinNumber);
-            Console.WriteLine($"[{DateTime.Now}] pin value : {pin}");
+            PinValue readValue = _gpioController.Read(_toggleSwitchPinNumber);
+            Console.WriteLine($"[{DateTime.Now}] pin value : {readValue}");
             
-            _currentState = (pin == PinValue.High);
+            _currentState = (readValue == PinValue.High);
 
             if (_currentState != _lastState)
             {
                 _lastState = _currentState;
                 Console.WriteLine($"[{DateTime.Now}] toggled: {_currentState}");
-                var reportedProperties = new TwinCollection { ["toggleState"] = _currentState };
+                TwinCollection reportedProperties = new TwinCollection { ["toggleState"] = _currentState };
                 await _deviceClient.UpdateReportedPropertiesAsync(reportedProperties, token);
             }
 
@@ -133,7 +130,7 @@ class Program
             {
                 PinValue ledValue = reported.ToString() == "True" ? PinValue.High : PinValue.Low; 
                 Console.WriteLine($"current led state: {ledValue}");
-                _ledPinController.Write(_ledPinNumber, ledValue);
+                _gpioController.Write(_ledPinNumber, ledValue);
             }
         }
     }
