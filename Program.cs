@@ -101,9 +101,13 @@ class Program
     static async Task RecvLEDStateAsync()
     {
         Console.WriteLine("RecvLEDStateAsync Start\n");
-        
-        Twin twin = await _registryManager.GetTwinAsync(_targetDeviceId);
-        ProcessTwinDataForLED(twin);
+        while (true)
+        {
+            Twin twin = await _registryManager.GetTwinAsync(_targetDeviceId);
+            ProcessTwinDataForLED(twin);
+            
+            await Task.Delay(1000);
+        }
     }
 
     static void ProcessTwinDataForLED(Twin twin)
