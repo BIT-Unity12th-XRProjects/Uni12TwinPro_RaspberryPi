@@ -26,110 +26,108 @@ class Program
     private static bool _ledState = false;
     static async Task Main(string[] args)
     {
+        // 1) CancellationTokenSource 생성
+        CancellationTokenSource cts = new CancellationTokenSource();
+
+        // 2) 초기화
         try
         {
             _registryManager = RegistryManager.CreateFromConnectionString(_registryConnectionString);
             _ledPinController.OpenPin(_ledPinNumber, PinMode.Output);
-            Task recvLEDTask = RecvLEDStateAsync();
         }
         catch (Exception ex)
         {
             Console.WriteLine($"registry error: {ex.Message}");
         }
-        
+
         try
         {
             _deviceClient = DeviceClient.CreateFromConnectionString(_deviceConnectionString);
-            _toggleSwitchPinController.OpenPin(_toggleSwitchPinNumber, PinMode.Input); 
-            Task sendToggleTask = SendToggleStateAsync();
+            _toggleSwitchPinController.OpenPin(_toggleSwitchPinNumber, PinMode.Input);
         }
         catch (Exception ex)
         {
             Console.WriteLine($"device client error: {ex.Message}");
         }
-        
-        while (true)
+
+        // 3) 토큰을 넘겨 Task 시작
+        Task recvLEDTask  = RecvLEDStateAsync(cts.Token);
+        Task sendToggleTask = SendToggleStateAsync(cts.Token);
+
+        // 4) Escape 누르면 Cancellation 요청
+        Console.WriteLine("Press ESC to exit...");
+        while (!cts.Token.IsCancellationRequested)
         {
-            if (Console.KeyAvailable)
+            if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Escape)
             {
-                var key = Console.ReadKey(true).Key;
-                if (key == ConsoleKey.Escape)
-                {
-                    // TODO
-                    // 두 Task 모두 종료 시키기
-                    break;
-                }
+                cts.Cancel();
             }
-        }
-        
-        Console.WriteLine($"program finish");
-        if (_deviceClient != null)
-        {
-            await _deviceClient.CloseAsync();
+            await Task.Delay(100);  // CPU 과다 사용 방지
         }
 
-        if (_registryManager != null)
+        // 5) 두 Task가 종료될 때까지 대기
+        try
         {
-            await _registryManager.CloseAsync();
+            await Task.WhenAll(recvLEDTask, sendToggleTask);
         }
+        catch (OperationCanceledException)
+        {
+            // 정상적인 취소
+        }
+
+        // 6) 리소스 정리
+        Console.WriteLine("Program finish");
+        if (_deviceClient != null)     await _deviceClient.CloseAsync();
+        if (_registryManager != null)  await _registryManager.CloseAsync();
     }
 
 
-    static async Task SendToggleStateAsync()
+    static async Task SendToggleStateAsync(CancellationToken token)
     {
-        while (true)
+        while (!token.IsCancellationRequested)
         {
             Console.WriteLine($"[{DateTime.Now}] current state : {_currentState}");
-            _toggleSwitchPinValue = _toggleSwitchPinController.Read(_toggleSwitchPinNumber);
-            Console.WriteLine($"[{DateTime.Now}] pin value : {_toggleSwitchPinValue}");
+            PinValue pin = _toggleSwitchPinController.Read(_toggleSwitchPinNumber);
+            Console.WriteLine($"[{DateTime.Now}] pin value : {pin}");
             
-            if (_toggleSwitchPinValue == PinValue.High)
-            {
-                _currentState = true;
-            }
-            else if (_toggleSwitchPinValue == PinValue.Low)
-            {
-                _currentState = false;
-            }
+            _currentState = (pin == PinValue.High);
 
-            if (_currentState == _lastState)
+            if (_currentState != _lastState)
             {
-                continue;
+                _lastState = _currentState;
+                Console.WriteLine($"[{DateTime.Now}] toggled: {_currentState}");
+                var reportedProperties = new TwinCollection { ["toggleState"] = _currentState };
+                await _deviceClient.UpdateReportedPropertiesAsync(reportedProperties, token);
             }
 
-            _lastState = _currentState;
-            Console.WriteLine($"[{DateTime.Now}] current Toggle Switch state: {_currentState}");
-            TwinCollection reportedProperties = new TwinCollection();
-            reportedProperties["toggleState"] = _currentState;
-
-            await _deviceClient.UpdateReportedPropertiesAsync(reportedProperties);
-            await Task.Delay(1000);
+            await Task.Delay(1000, token);
         }
+
+        token.ThrowIfCancellationRequested();
     }
 
-    static async Task RecvLEDStateAsync()
+    static async Task RecvLEDStateAsync(CancellationToken token)
     {
-        Console.WriteLine("RecvLEDStateAsync Start\n");
-        while (true)
+        Console.WriteLine("RecvLEDStateAsync Start");
+        while (!token.IsCancellationRequested)
         {
-            Twin twin = await _registryManager.GetTwinAsync(_targetDeviceId);
+            Twin twin = await _registryManager.GetTwinAsync(_targetDeviceId, token);
             ProcessTwinDataForLED(twin);
-            
-            await Task.Delay(1000);
+            await Task.Delay(1000, token);
         }
+
+        token.ThrowIfCancellationRequested();
     }
 
     static void ProcessTwinDataForLED(Twin twin)
     {
-        Console.WriteLine("ProcessTwinDataForLED Start\n");
+        Console.WriteLine("ProcessTwinDataForLED Start");
         if (twin == null)
         {
-            Console.WriteLine("Twin is null");
             return;
         }
         if (twin.Properties.Desired.Contains("ledState"))
         {
-            Console.WriteLine("ledState Contain\n");
             object reported = twin.Properties.Desired["ledState"];
             if (reported != null)
             {
