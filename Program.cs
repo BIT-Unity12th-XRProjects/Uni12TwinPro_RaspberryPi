@@ -26,13 +26,11 @@ class Program
     private static bool _ledState = false;
     static async Task Main(string[] args)
     {
-        Task sendToggleTask = SendToggleStateAsync();
-        Task recvLEDTask = RecvLEDStateAsync();
         try
         {
             _registryManager = RegistryManager.CreateFromConnectionString(_registryConnectionString);
             _ledPinController.OpenPin(_ledPinNumber, PinMode.Output);
-            recvLEDTask.Start();
+            Task recvLEDTask = RecvLEDStateAsync();
         }
         catch (Exception ex)
         {
@@ -42,8 +40,8 @@ class Program
         try
         {
             _deviceClient = DeviceClient.CreateFromConnectionString(_deviceConnectionString);
-            _toggleSwitchPinController.OpenPin(_toggleSwitchPinNumber, PinMode.Input);
-            sendToggleTask.Start();
+            _toggleSwitchPinController.OpenPin(_toggleSwitchPinNumber, PinMode.Input); 
+            Task sendToggleTask = SendToggleStateAsync();
         }
         catch (Exception ex)
         {
@@ -96,7 +94,7 @@ class Program
 
             if (_currentState == _lastState)
             {
-                return;
+                continue;
             }
 
             _lastState = _currentState;
