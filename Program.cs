@@ -40,7 +40,7 @@ class Program
         try
         {
             _deviceClient = DeviceClient.CreateFromConnectionString(_deviceConnectionString);
-            _gpioController.OpenPin(_toggleSwitchPinNumber, PinMode.Input);
+            _gpioController.OpenPin(_toggleSwitchPinNumber, PinMode.InputPullUp);
         }
         catch (Exception ex)
         {
@@ -85,7 +85,7 @@ class Program
         {
             Console.WriteLine($"[{DateTime.Now}] current state : {_currentState}");
             PinValue readValue = _gpioController.Read(_toggleSwitchPinNumber);
-            Console.WriteLine($"[{DateTime.Now}] pin value : {readValue}");
+            Console.WriteLine($"[{DateTime.Now}] Toggle State : {readValue}");
             
             _currentState = (readValue == PinValue.High);
 
@@ -118,7 +118,6 @@ class Program
 
     static void ProcessTwinDataForLED(Twin twin)
     {
-        Console.WriteLine("ProcessTwinDataForLED Start");
         if (twin == null)
         {
             return;
