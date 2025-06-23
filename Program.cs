@@ -31,37 +31,48 @@ class Program
         try
         {
             _registryManager = RegistryManager.CreateFromConnectionString(_registryConnectionString);
-            _deviceClient = DeviceClient.CreateFromConnectionString(_deviceConnectionString);
-
             _ledPinController.OpenPin(_ledPinNumber, PinMode.Output);
-            _toggleSwitchPinController.OpenPin(_toggleSwitchPinNumber, PinMode.Input);
-                
-            sendToggleTask.Start();
             recvLEDTask.Start();
-
-            while (true)
-            {
-                if (Console.KeyAvailable)
-                {
-                    var key = Console.ReadKey(true).Key;
-                    if (key == ConsoleKey.Escape)
-                    {
-                        break;
-                    }
-                }
-            }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"에러 발생: {ex.Message}");
+            Console.WriteLine($"registry error: {ex.Message}");
         }
-        finally
+        
+        try
         {
-            Console.WriteLine($"program finish");
-            if (_deviceClient != null)
+            _deviceClient = DeviceClient.CreateFromConnectionString(_deviceConnectionString);
+            _toggleSwitchPinController.OpenPin(_toggleSwitchPinNumber, PinMode.Input);
+            sendToggleTask.Start();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"device client error: {ex.Message}");
+        }
+        
+        while (true)
+        {
+            if (Console.KeyAvailable)
             {
-                await _deviceClient.CloseAsync();
+                var key = Console.ReadKey(true).Key;
+                if (key == ConsoleKey.Escape)
+                {
+                    // TODO
+                    // 두 Task 모두 종료 시키기
+                    break;
+                }
             }
+        }
+        
+        Console.WriteLine($"program finish");
+        if (_deviceClient != null)
+        {
+            await _deviceClient.CloseAsync();
+        }
+
+        if (_registryManager != null)
+        {
+            await _registryManager.CloseAsync();
         }
     }
 
