@@ -107,10 +107,12 @@ class Program
                 {
                     Console.WriteLine($"temperature: {temperature}");
                 }
+                Task.Delay(1000);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"exception: {ex.Message}");
+                break;
             }
         }
     }
