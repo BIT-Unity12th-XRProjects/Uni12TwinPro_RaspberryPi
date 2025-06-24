@@ -98,6 +98,8 @@ class Program
         {
             try
             {
+                Console.WriteLine("DHT11 Read");
+                
                 if (dht11.TryReadHumidity(out var humidity))
                 {
                     Console.WriteLine($"humidity: {humidity}");
@@ -107,7 +109,8 @@ class Program
                 {
                     Console.WriteLine($"temperature: {temperature}");
                 }
-                Task.Delay(1000);
+                
+                await Task.Delay(1000);
             }
             catch (Exception ex)
             {
