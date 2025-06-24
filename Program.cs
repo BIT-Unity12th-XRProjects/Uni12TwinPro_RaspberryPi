@@ -2,7 +2,7 @@ using Microsoft.Azure.Devices;
 using Microsoft.Azure.Devices.Client;
 using Microsoft.Azure.Devices.Shared;
 using System.Device.Gpio;
-
+using Iot.Device.DHTxx;
 class Program
 {
     private static RegistryManager _registryManager;
@@ -24,6 +24,7 @@ class Program
     private static int _doorSwitchPinNumber = 14;
     private static int _windowSwitchPinNumber = 15;
     private static int _ledPinNumber = 4;
+    private static int _dhtPinNumber = 26;
     
     // Connection String
     private static string _deviceConnectionString =
@@ -32,12 +33,15 @@ class Program
         "HostName=Uni12TwinPro.azure-devices.net;SharedAccessKeyName=iothubowner;SharedAccessKey=ts51E0cBODPGFlLbDyoC7pZiHyzbP3wJ/AIoTODruRw=";
     static string _targetDeviceId = "TestDevice";
     
+    // DTH11
+    private static Dht11 dht11;
 
     static async Task Main(string[] args)
     {
         // 1) CancellationTokenSource 생성
         CancellationTokenSource cts = new CancellationTokenSource();
-
+        dht11 = new Dht11(_dhtPinNumber, _gpioController);
+        
         // 2) 초기화
         try
         {
@@ -89,6 +93,26 @@ class Program
         Console.WriteLine("Program finish");
         if (_deviceClient != null)     await _deviceClient.CloseAsync();
         if (_registryManager != null)  await _registryManager.CloseAsync();
+
+        while (true)
+        {
+            try
+            {
+                if (dht11.TryReadHumidity(out var humidity))
+                {
+                    Console.WriteLine($"humidity: {humidity}");
+                }
+
+                if (dht11.TryReadTemperature(out var temperature))
+                {
+                    Console.WriteLine($"temperature: {temperature}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"exception: {ex.Message}");
+            }
+        }
     }
 
 
