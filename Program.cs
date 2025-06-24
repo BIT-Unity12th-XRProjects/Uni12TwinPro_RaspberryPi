@@ -5,22 +5,34 @@ using System.Device.Gpio;
 
 class Program
 {
+    private static RegistryManager _registryManager;
     private static DeviceClient _deviceClient;
-    private static bool _currentState = false;
-    private static bool _lastState = false;
+    
+    // GPIO States
+    private static bool _currentDoorState = false;
+    private static bool _currentWindowState = false;
+    
+    private static bool _lastDoorState = false;
+    private static bool _lastWindowState = false;
+    
+    private static bool _ledState = false;
+    
+    // GPIO Pin Controller
     private static GpioController _gpioController = new GpioController();
-    private static int _toggleSwitchPinNumber = 14;
+    
+    // Pin Numbers
+    private static int _doorSwitchPinNumber = 14;
+    private static int _windowSwitchPinNumber = 15;
     private static int _ledPinNumber = 4;
     
+    // Connection String
     private static string _deviceConnectionString =
         "HostName=Uni12TwinPro.azure-devices.net;DeviceId=TestDevice;SharedAccessKey=tYGn6+N1iCwjiGVaM8oJp3HzlLinx0W6w0bHoMw5HOo=";
     private static string _registryConnectionString =
         "HostName=Uni12TwinPro.azure-devices.net;SharedAccessKeyName=iothubowner;SharedAccessKey=ts51E0cBODPGFlLbDyoC7pZiHyzbP3wJ/AIoTODruRw=";
     static string _targetDeviceId = "TestDevice";
     
-    private static RegistryManager _registryManager;
 
-    private static bool _ledState = false;
     static async Task Main(string[] args)
     {
         // 1) CancellationTokenSource 생성
@@ -40,7 +52,8 @@ class Program
         try
         {
             _deviceClient = DeviceClient.CreateFromConnectionString(_deviceConnectionString);
-            _gpioController.OpenPin(_toggleSwitchPinNumber, PinMode.InputPullUp);
+            _gpioController.OpenPin(_doorSwitchPinNumber, PinMode.InputPullUp);
+            _gpioController.OpenPin(_windowSwitchPinNumber, PinMode.InputPullUp);
         }
         catch (Exception ex)
         {
@@ -83,18 +96,28 @@ class Program
     {
         while (!token.IsCancellationRequested)
         {
-            Console.WriteLine($"[{DateTime.Now}] current state : {_currentState}");
-            PinValue readValue = _gpioController.Read(_toggleSwitchPinNumber);
-            Console.WriteLine($"[{DateTime.Now}] Toggle State : {readValue}");
+            PinValue doorState = _gpioController.Read(_doorSwitchPinNumber);
+            Console.WriteLine($"[{DateTime.Now}] Door State : {doorState}");
+            PinValue windowState = _gpioController.Read(_windowSwitchPinNumber);
+            Console.WriteLine($"[{DateTime.Now}] Window State : {windowState}");
             
-            _currentState = (readValue == PinValue.High);
-
-            if (_currentState != _lastState)
+            _currentDoorState = (doorState == PinValue.High);
+            
+            if (_currentDoorState != _lastDoorState)
             {
-                _lastState = _currentState;
-                Console.WriteLine($"[{DateTime.Now}] toggled: {_currentState}");
-                TwinCollection reportedProperties = new TwinCollection { ["toggleState"] = _currentState };
+                _lastDoorState = _currentDoorState;
+                Console.WriteLine($"[{DateTime.Now}] Door toggled: {_currentDoorState}");
+                TwinCollection reportedProperties = new TwinCollection { ["doorState"] = _currentDoorState };
                 await _deviceClient.UpdateReportedPropertiesAsync(reportedProperties, token);
+            }
+            
+            _currentWindowState = (windowState == PinValue.High);
+            if (_currentWindowState != _lastWindowState)
+            {
+                _lastWindowState = _currentWindowState;
+                Console.WriteLine($"[{DateTime.Now}] Window toggled : {_currentWindowState}");
+                TwinCollection reportedProperties = new TwinCollection { ["windowState"] = _currentWindowState };
+                await  _deviceClient.UpdateReportedPropertiesAsync(reportedProperties, token);
             }
 
             await Task.Delay(1000, token);
