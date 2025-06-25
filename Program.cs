@@ -96,7 +96,7 @@ class Program
 
         while (true)
         {
-            Thread.Sleep(2000);  // 최소 2초 대기
+            await Task.Delay(2000);
 
             if (dht11.TryReadHumidity(out var humidity))
             {
