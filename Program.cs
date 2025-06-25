@@ -102,11 +102,15 @@ class Program
             {
                 if (dht11.TryReadTemperature(out var temperature))
                 {
-                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] 온도: {temperature.DegreesCelsius:F1} ℃, 습도: {humidity:F1} %");
+                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Temperature: {temperature.DegreesCelsius:F1} ℃, Humidity: {humidity:F1} %");
                     continue;
                 }
+                else
+                {
+                    Console.WriteLine("Cant Read - Temperature");
+                }
             }
-            Console.WriteLine("읽기 실패 — 다시 시도합니다.");
+            Console.WriteLine("Cant Read - Humidity");
         }
     }
 
