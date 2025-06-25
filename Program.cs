@@ -96,27 +96,17 @@ class Program
 
         while (true)
         {
-            try
-            {
-                Console.WriteLine("DHT11 Read");
-                
-                if (dht11.TryReadHumidity(out var humidity))
-                {
-                    Console.WriteLine($"humidity: {humidity}");
-                }
+            Thread.Sleep(2000);  // 최소 2초 대기
 
+            if (dht11.TryReadHumidity(out var humidity))
+            {
                 if (dht11.TryReadTemperature(out var temperature))
                 {
-                    Console.WriteLine($"temperature: {temperature}");
+                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] 온도: {temperature.DegreesCelsius:F1} ℃, 습도: {humidity:F1} %");
+                    continue;
                 }
-                
-                await Task.Delay(1000);
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"exception: {ex.Message}");
-                break;
-            }
+            Console.WriteLine("읽기 실패 — 다시 시도합니다.");
         }
     }
 
